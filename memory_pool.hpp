@@ -96,6 +96,16 @@ public:
         }
     }
 
+    T* reference(SlotPos pos) {
+        auto [block_id, slot_id] = SplitId(pos);
+        auto& slot = block_table_[block_id].slot_array[slot_id];
+        return &slot.element;
+    }
+
+    void dereference(T*) {
+
+    }
+
 private:
     std::tuple<BlockId, SlotId> SplitId(const SlotPos& slot_pos) const noexcept {
         BlockId block_id = slot_pos / kBlockSlotCount;
