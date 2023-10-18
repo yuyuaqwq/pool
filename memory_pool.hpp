@@ -141,6 +141,9 @@ constexpr bool operator==(const CompactMemoryPool<T1>& lhs, const CompactMemoryP
 template <class T, size_t block_size = 4096>
 class MemoryPool {
 public:
+    static_assert(!std::is_const_v<T>, "The C++ Standard forbids containers of const elements "
+        "because allocator<const T> is ill-formed.");
+
     using value_type = T;
     using size_type = size_t;
     using difference_type = ptrdiff_t;
