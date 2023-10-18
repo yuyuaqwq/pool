@@ -35,6 +35,7 @@ public:
         using other = CompactMemoryPool<U>;
     };
 
+private:
     using SlotPos = uint32_t;
     using BlockId = uint32_t;
     using SlotId = uint32_t;
@@ -154,6 +155,7 @@ public:
         using other =  MemoryPool<U>;
     };
 
+private:
 	union Slot {
         Slot* next;
         T element;
