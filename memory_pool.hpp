@@ -1,8 +1,8 @@
-#ifndef MEMORY_POOL_MEMORY_POOL_HPP_
+#ifndef FPOO_MEMORY_POOL_HPP_
 
 #include <vector>
 
-namespace spoo {
+namespace fpoo {
 
 namespace detail {
 consteval size_t bit_shift(size_t base) {
@@ -75,17 +75,16 @@ public:
         }
     }
 
-    void deallocate(SlotPos& free_pos) {
+    void deallocate(SlotPos free_pos) {
         if (free_pos != kSlotPosInvalid) {
             auto [block_id, slot_id] = SplitId(free_pos);
             auto& slot = block_table_[block_id].slot_array[slot_id];
             slot.next = free_slot_;
             free_slot_ = free_pos;
-            free_pos = kSlotPosInvalid;
         }
     }
 
-    T* get_ptr(const SlotPos& pos) noexcept {
+    T* get_ptr(SlotPos pos) noexcept {
         auto [block_id, slot_id] = SplitId(pos);
         auto& alloc_slot = block_table_[block_id].slot_array[slot_id];
         return &alloc_slot.element;
@@ -132,16 +131,26 @@ public:
 
     static constexpr size_t kBlockSlotCount = block_size / sizeof(Slot);
 
-  
 public:
     MemoryPool() noexcept {
         free_slot_ = nullptr;
         current_slot_ = nullptr;
         end_slot_ = nullptr;
+
+        current_block_ = nullptr;
     }
     ~MemoryPool() noexcept {
-        for (auto& block : block_table_) {
-            delete[] block.slot_array;
+        if constexpr (sizeof(Slot) == sizeof(Slot*)) {
+            while (current_block_) {
+                auto next = current_block_->next;
+                operator delete(reinterpret_cast<void*>(current_block_));
+                current_block_ = next;
+            }
+        }
+        else {
+            for (auto& block : block_table_) {
+                operator delete(reinterpret_cast<void*>(block.slot_array));
+            }
         }
     }
 
@@ -170,23 +179,44 @@ public:
         }
     }
 
-private:
-    void CreateBlock() {
-        auto new_block_ = new Slot[kBlockSlotCount];
-        current_slot_ = &new_block_[0];
-        end_slot_ = &new_block_[kBlockSlotCount];
-        block_table_.push_back(BlockInfo{ new_block_ });
+    template <class U, class... Args>
+    void construct(U* ptr, Args&&... args) {
+        new (ptr) U(std::forward<Args>(args)...);
+    }
+
+    template <class U>
+    void destroy(U* ptr) {
+        ptr->~U();
     }
 
 private:
+    inline void CreateBlock() {
+        //auto new_block = new Slot[kBlockSlotCount];
+        auto new_block = reinterpret_cast<Slot*>(operator new(kBlockSlotCount * sizeof(Slot)));
+        
+        end_slot_ = &new_block[kBlockSlotCount];
+
+        if constexpr (sizeof(Slot) == sizeof(Slot*)) {
+            current_slot_ = &new_block[1];
+            new_block[0].next = current_block_;
+            current_block_ = new_block;
+        }
+        else {
+            current_slot_ = &new_block[0];
+            block_table_.push_back(BlockInfo{ new_block });
+        }
+    }
+
+private:
+    Slot* current_block_;
+    std::vector<BlockInfo> block_table_;
+
     Slot* free_slot_;
     Slot* current_slot_;
     Slot* end_slot_;
-
-    std::vector<BlockInfo> block_table_;
 };
 
 
-} // namespace spoo
+}  // namespace fpoo
 
-#endif // MEMORY_POOL_MEMORY_POOL_HPP_
+#endif  // FPOO_MEMORY_POOL_HPP_

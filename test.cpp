@@ -4,29 +4,30 @@
 #include <array>
 #include <chrono>
 
-#include <spoo/MemoryPool.h>
-#include <spoo/memory_pool.hpp>
+#include <fpoo/MemoryPool.h>
+#include <fpoo/memory_pool.hpp>
 
 
 int main() {
     std::map<int, int> aaaaa;
     std::set<int> aaaaaa;
 
-    using AllocType = std::array<int32_t, 2>;
+    using AllocType = std::array<int32_t, 10>;
 
     std::cout << "size: " << sizeof(AllocType) << std::endl;
 
+    sizeof(AllocType);
+    alignof(AllocType);
     
     std::vector<AllocType*> test_res(100000000);
 
     std::vector<AllocType*> test_res2(100000000);
 
 
-    spoo::MemoryPool<AllocType> pool;
+    fpoo::MemoryPool<AllocType> pool;
 
     std::chrono::steady_clock::time_point start, finish;
     std::chrono::milliseconds duration;
-    std::cout << "spoo::MemoryPool" << std::endl;
 
 
     std::cout << "MemoryPool" << std::endl;
@@ -78,9 +79,11 @@ int main() {
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start);
     std::cout << "deallocate: " << duration.count() << "ms" << std::endl;
 
+    
 
+    std::cout << "fpoo::MemoryPool" << std::endl;
 
-
+    //sizeof(fpoo::MemoryPool<AllocType>::Slot);
 
     start = std::chrono::steady_clock::now();
 
