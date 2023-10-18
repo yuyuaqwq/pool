@@ -191,20 +191,19 @@ public:
 
 private:
     inline void CreateBlock() {
-        //auto new_block = new Slot[kBlockSlotCount];
         auto new_block = reinterpret_cast<Slot*>(operator new(kBlockSlotCount * sizeof(Slot)));
-        
-        end_slot_ = &new_block[kBlockSlotCount];
-
         if constexpr (sizeof(Slot) == sizeof(Slot*)) {
-            current_slot_ = &new_block[1];
             new_block[0].next = current_block_;
             current_block_ = new_block;
+
+            current_slot_ = &new_block[1];
         }
         else {
-            current_slot_ = &new_block[0];
             block_table_.push_back(BlockInfo{ new_block });
+
+            current_slot_ = &new_block[0];
         }
+        end_slot_ = &new_block[kBlockSlotCount];
     }
 
 private:
