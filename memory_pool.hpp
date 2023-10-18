@@ -26,6 +26,15 @@ consteval size_t bit_fill(size_t bit_count) {
 template <class T, size_t block_size = 4096>
 class CompactMemoryPool {
 public:
+    using value_type = T;
+    using size_type = uint32_t;
+    using difference_type = uint32_t;
+    using propagate_on_container_move_assignment = std::true_type;
+
+    template <typename U> struct rebind {
+        using other = CompactMemoryPool<U>;
+    };
+
     using SlotPos = uint32_t;
     using BlockId = uint32_t;
     using SlotId = uint32_t;
@@ -58,7 +67,10 @@ public:
     CompactMemoryPool(const CompactMemoryPool&) = delete;
     void operator=(const CompactMemoryPool&) = delete;
 
-    SlotPos allocate() {
+    [[nodiscard]] SlotPos allocate(std::size_t n = 1) {
+        if (n > 1) {
+            throw std::runtime_error("memory pool does not support allocating multiple elements.");
+        }
         SlotPos res{};
         if (free_slot_ != kSlotPosInvalid) {
             res = free_slot_;
@@ -75,19 +87,13 @@ public:
         }
     }
 
-    void deallocate(SlotPos free_pos) {
+    void deallocate(SlotPos free_pos, std::size_t n = 1) {
         if (free_pos != kSlotPosInvalid) {
             auto [block_id, slot_id] = SplitId(free_pos);
             auto& slot = block_table_[block_id].slot_array[slot_id];
             slot.next = free_slot_;
             free_slot_ = free_pos;
         }
-    }
-
-    T* get_ptr(SlotPos pos) noexcept {
-        auto [block_id, slot_id] = SplitId(pos);
-        auto& alloc_slot = block_table_[block_id].slot_array[slot_id];
-        return &alloc_slot.element;
     }
 
 private:
@@ -117,9 +123,24 @@ private:
     SlotPos end_slot_;
 };
 
+template< class T1, class T2 >
+constexpr bool operator==(const CompactMemoryPool<T1>& lhs, const CompactMemoryPool<T2>& rhs) noexcept {
+    return true;
+}
+
 template <class T, size_t block_size = 4096>
 class MemoryPool {
 public:
+    using value_type = T;
+    using size_type = size_t;
+    using difference_type = ptrdiff_t;
+    using propagate_on_container_move_assignment = std::true_type;
+    using is_always_equal = std::true_type;
+
+    template <typename U> struct rebind {
+        using other =  MemoryPool<U>;
+    };
+
 	union Slot {
         Slot* next;
         T element;
@@ -154,10 +175,28 @@ public:
         }
     }
 
+    MemoryPool(MemoryPool&& other) noexcept {
+        operator=(std::move(other));
+    }
+    void operator=(MemoryPool&& other) noexcept {
+        block_table_ = std::move(other.block_table_);
+        current_block_ = other.current_block_;
+        free_slot_ = other.free_slot_;
+        current_slot_ = other.current_slot_;
+        end_slot_ = other.end_slot_;
+        other.current_block_ = nullptr;
+        other.free_slot_ = nullptr;
+        other.current_slot_ = nullptr;
+        other.end_slot_ = nullptr;
+    }
+
     MemoryPool(const MemoryPool&) = delete;
     void operator=(const MemoryPool&) = delete;
 
-    T* allocate() {
+    [[nodiscard]] T* allocate(std::size_t n = 1) {
+        if (n > 1) {
+            throw std::runtime_error("memory pool does not support allocating multiple elements.");
+        }
         if (free_slot_ != nullptr) {
             auto res = free_slot_;
             free_slot_ = res->next;
@@ -171,22 +210,12 @@ public:
         }
     }
 
-    void deallocate(T* free_ptr) {
+    void deallocate(T* free_ptr, std::size_t n = 1) {
         if (free_ptr != nullptr) {
             auto free_slot = reinterpret_cast<Slot*>(free_ptr);
             free_slot->next = free_slot_;
             free_slot_ = free_slot;
         }
-    }
-
-    template <class U, class... Args>
-    void construct(U* ptr, Args&&... args) {
-        new (ptr) U(std::forward<Args>(args)...);
-    }
-
-    template <class U>
-    void destroy(U* ptr) {
-        ptr->~U();
     }
 
 private:
@@ -215,6 +244,10 @@ private:
     Slot* end_slot_;
 };
 
+template< class T1, class T2 >
+constexpr bool operator==(const MemoryPool<T1>& lhs, const MemoryPool<T2>& rhs) noexcept {
+    return true;
+}
 
 }  // namespace fpoo
 
