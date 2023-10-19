@@ -1,18 +1,30 @@
 ﻿#include <iostream>
 #include <map>
 #include <set>
+#include <vector>
 #include <array>
 #include <chrono>
 
 #include <fpoo/memory_pool.hpp>
 
-#include <rbt/rb_tree.hpp>
+#include <rbt/set.hpp>
 
 #include <vector>
 
 int main() {
+    //fpoo::CompactMemoryPool<rbt::set<uint64_t>::Node> cmp;
+
     std::vector<int> fake;
 
+    decltype(operator<=>(std::declval<std::string>(), std::declval<std::string>())) aaa;
+
+    rbt::set<uint64_t> set;
+    uint64_t adawaaaa = 31321;
+    set.insert(adawaaaa);
+    set.insert(233);
+    set.insert(999999);
+
+    sizeof(set);
 
     std::map<int, int> aaaaa;
     std::set<int, std::less<int>, fpoo::MemoryPool<int>> aaaaaa;

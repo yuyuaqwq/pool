@@ -1,4 +1,5 @@
 #ifndef FPOO_MEMORY_POOL_HPP_
+#define FPOO_MEMORY_POOL_HPP_
 
 #include <vector>
 
@@ -117,7 +118,7 @@ private:
     }
 
     void CreateBlock() {
-        auto new_block = new Slot[kBlockSlotCount];
+        auto new_block = reinterpret_cast<Slot*>(operator new(kBlockSlotCount * sizeof(Slot)));
         auto slot_pos = block_table_.size() * kBlockSlotCount;
         block_table_.push_back(BlockInfo{ new_block });
 
