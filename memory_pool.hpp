@@ -62,7 +62,7 @@ public:
     }
     ~CompactMemoryPool() noexcept {
         for (auto& block : block_table_) {
-            delete[] block.slot_array;
+            operator delete(reinterpret_cast<void*>(block.slot_array));
         }
     }
 
