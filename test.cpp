@@ -26,13 +26,16 @@ int main() {
     std::list<int> aa;
 
     rbt::set<std::string> set;
+    set.insert("fake");
+    set.insert("sb");
+
     //uint64_t adawaaaa = 31321;
     //set.insert(adawaaaa);
     //set.insert(233);
     //set.insert(999999);
 
 
-    sizeof(rbt::set<uint64_t>::Node);
+    //sizeof(rbt::set<uint64_t>::Node);
 
     std::map<int, int> aaaaa;
     std::set<int, std::less<int>, fpoo::MemoryPool<int>> aaaaaa;
