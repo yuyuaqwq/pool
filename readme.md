@@ -1,8 +1,6 @@
-## mempool
+## pool
 
-快速的内存池
-
-
+快速的池组件库
 
 ## reference
 

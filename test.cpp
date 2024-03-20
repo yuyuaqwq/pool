@@ -6,7 +6,7 @@
 #include <chrono>
 #include <list>
 
-#include <fpoo/memory_pool.hpp>
+#include <mempool/memory_pool.hpp>
 
 #include <rbt/set.hpp>
 
@@ -38,7 +38,7 @@ int main() {
     //sizeof(rbt::set<uint64_t>::Node);
 
     std::map<int, int> aaaaa;
-    std::set<int, std::less<int>, fpoo::MemoryPool<int>> aaaaaa;
+    std::set<int, std::less<int>, pool::MemoryPool<int>> aaaaaa;
     
     aaaaaa.insert(100);
     aaaaaa.insert(200);
