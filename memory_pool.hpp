@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include <mempool/detail.hpp>
+#include <pool/detail.hpp>
 
 namespace pool {
 
@@ -26,13 +26,8 @@ public:
 private:
 	union Slot {
         Slot* next;
-        T element;
+        value_type element;
     };
-
-    struct BlockInfo {
-        Slot* slot_array;
-    };
-
     static constexpr size_t kBlockSlotCount = block_size / sizeof(Slot);
 
 public:
@@ -43,18 +38,11 @@ public:
 
         current_block_ = nullptr;
     }
-    ~MemoryPool() noexcept {
-        if constexpr (sizeof(Slot) == sizeof(Slot*)) {
-            while (current_block_) {
-                auto next = current_block_->next;
-                operator delete(reinterpret_cast<void*>(current_block_));
-                current_block_ = next;
-            }
-        }
-        else {
-            for (auto& block : block_table_) {
-                operator delete(reinterpret_cast<void*>(block.slot_array));
-            }
+    constexpr ~MemoryPool() noexcept {
+        while (current_block_) {
+            auto next = current_block_->next;
+            operator delete(reinterpret_cast<void*>(current_block_));
+            current_block_ = next;
         }
     }
 
@@ -62,37 +50,39 @@ public:
         operator=(std::move(other));
     }
     void operator=(MemoryPool&& other) noexcept {
-        block_table_ = std::move(other.block_table_);
-        current_block_ = other.current_block_;
-        free_slot_ = other.free_slot_;
-        current_slot_ = other.current_slot_;
-        end_slot_ = other.end_slot_;
-        other.current_block_ = nullptr;
-        other.free_slot_ = nullptr;
-        other.current_slot_ = nullptr;
-        other.end_slot_ = nullptr;
+        if (other != this) {
+            free_slot_ = other.free_slot_;
+            current_slot_ = other.current_slot_;
+            end_slot_ = other.end_slot_;
+            other.current_block_ = nullptr;
+            other.free_slot_ = nullptr;
+            other.current_slot_ = nullptr;
+            other.end_slot_ = nullptr;
+        }
     }
 
     MemoryPool(const MemoryPool&) = delete;
     void operator=(const MemoryPool&) = delete;
 
+    template <class U> MemoryPool(const MemoryPool<U>& pool) noexcept :
+        MemoryPool()
+    {}
+
     [[nodiscard]] T* allocate(std::size_t n = 1) {
-        if (n > 1) {
-            throw std::runtime_error("memory pool does not support allocating multiple elements.");
-        }
+        //if (n > 1) {
+        //    throw std::runtime_error("memory pool does not support allocating multiple elements.");
+        //}
         if (free_slot_ != nullptr) {
             auto res = free_slot_;
             free_slot_ = res->next;
             return &res->element;
-        }
-        else {
+        } else {
             if (current_slot_ >= end_slot_) {
                 CreateBlock();
             }
             return &(current_slot_++)->element;
         }
     }
-
     void deallocate(T* free_ptr, std::size_t n = 1) {
         if (free_ptr != nullptr) {
             auto free_slot = reinterpret_cast<Slot*>(free_ptr);
@@ -104,23 +94,14 @@ public:
 private:
     inline void CreateBlock() {
         auto new_block = reinterpret_cast<Slot*>(operator new(kBlockSlotCount * sizeof(Slot)));
-        if constexpr (sizeof(Slot) == sizeof(Slot*)) {
-            new_block[0].next = current_block_;
-            current_block_ = new_block;
-
-            current_slot_ = &new_block[1];
-        }
-        else {
-            block_table_.emplace_back(new_block);
-
-            current_slot_ = &new_block[0];
-        }
+        new_block[0].next = current_block_;
+        current_block_ = new_block;
+        current_slot_ = &new_block[1];
         end_slot_ = &new_block[kBlockSlotCount];
     }
 
 private:
     Slot* current_block_;
-    std::vector<BlockInfo> block_table_;
 
     Slot* free_slot_;
     Slot* current_slot_;

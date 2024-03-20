@@ -1,134 +1,117 @@
-﻿#include <iostream>
-#include <map>
-#include <set>
+﻿#include <cassert>
+#include <iostream>
 #include <vector>
+#include <map>
 #include <array>
 #include <chrono>
-#include <list>
 
-#include <mempool/memory_pool.hpp>
-
-#include <rbt/set.hpp>
-
-#include <vector>
-
-int A() {
-    return 1;
-}
+#include <pool/memory_pool.hpp>
+#include <pool/compact_memory_pool.hpp>
+#include <pool/static_memory_pool.hpp>
 
 int main() {
-    //fpoo::CompactMemoryPool<rbt::set<uint64_t>::Node> cmp;
+    constexpr int count = 100000000;
+    constexpr int bytes = 8;
+    constexpr int block_bytes = 4096;
 
-    std::vector<int> fake;
+    std::cout << "count:" << count << std::endl;
+    std::cout << "bytes:" << bytes << std::endl;
+    std::cout << "block_bytes:" << block_bytes << std::endl;
 
-    decltype(operator<=>(std::declval<std::string>(), std::declval<std::string>())) aaa;
-
-    std::list<int> aa;
-
-    rbt::set<std::string> set;
-    set.insert("fake");
-    set.insert("sb");
-
-    //uint64_t adawaaaa = 31321;
-    //set.insert(adawaaaa);
-    //set.insert(233);
-    //set.insert(999999);
-
-
-    //sizeof(rbt::set<uint64_t>::Node);
-
-    std::map<int, int> aaaaa;
-    std::set<int, std::less<int>, pool::MemoryPool<int>> aaaaaa;
-    
-    aaaaaa.insert(100);
-    aaaaaa.insert(200);
-
-    using AllocType = std::array<int32_t, 2>;
+    pool::StaticMemoryPool<int> sp1;
+    auto a = sp1.allocate();
+    sp1.deallocate(a);
+    pool::StaticMemoryPool<int> sp2;
+    auto b = sp1.allocate();
+    sp2.deallocate(b);
+    assert(a == b);
+    std::map<int, int, std::less<>, pool::StaticMemoryPool<std::pair<const int, int>>> map;
+    for (int i = 0; i < 10000; i++) {
+        map.insert({ i, i });
+    }
 
 
-    std::cout << "size: " << sizeof(AllocType) << std::endl;
+    using AllocType = std::array<int32_t, bytes / 4>;
+    std::vector<AllocType*> test_res(count);
+    std::vector<uint32_t> test_res2(count);
 
-    
-    std::vector<AllocType*> test_res(100000000);
-
-    std::vector<AllocType*> test_res2(100000000);
-
-
-    fpoo::MemoryPool<AllocType> pool;
+    pool::MemoryPool<AllocType, block_bytes> pool;
 
     std::chrono::steady_clock::time_point start, finish;
     std::chrono::milliseconds duration;
 
-
-    std::cout << "fpoo::MemoryPool" << std::endl;
-
-    //sizeof(fpoo::MemoryPool<AllocType>::Slot);
+    std::cout << std::endl << "pool::MemoryPool" << std::endl;
 
     start = std::chrono::steady_clock::now();
-
     for (int i = 0; i < 100000000; i++) {
         test_res[i] = pool.allocate();
         //auto ptr = pool.get_ptr(test_res[i]);
         //*ptr = i;
     }
-
     finish = std::chrono::steady_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start);
     std::cout << "allocate: " << duration.count() << "ms" << std::endl;
 
-
     start = std::chrono::steady_clock::now();
-
     for (int i = 0; i < 100000000; i++) {
         pool.deallocate(test_res[i]);
     }
-
-
     finish = std::chrono::steady_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start);
     std::cout << "deallocate: " << duration.count() << "ms" << std::endl;
 
     start = std::chrono::steady_clock::now();
-
     for (int i = 0; i < 100000000; i++) {
         test_res[i] = pool.allocate();
-        //*test_res2[i] = i;
     }
-
     finish = std::chrono::steady_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start);
     std::cout << "allocate: " << duration.count() << "ms" << std::endl;
 
     start = std::chrono::steady_clock::now();
-
     for (int i = 0; i < 100000000; i++) {
         pool.deallocate(test_res[i]);
     }
-
     finish = std::chrono::steady_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start);
     std::cout << "deallocate: " << duration.count() << "ms" << std::endl;
 
 
-    
+    std::cout << std::endl << "std" << std::endl;
 
     start = std::chrono::steady_clock::now();
-
     for (int i = 0; i < 100000000; i++) {
-        new AllocType;
+        test_res[i] = new AllocType;
     }
-
     finish = std::chrono::steady_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start);
     std::cout << "new: " << duration.count() << "ms" << std::endl;
 
-    //
-    //auto pos2 = pool.allocate();
-    //pool.deallocate(pos);
-    //auto pos3 = pool.allocate();
-    //auto pos4 = pool.allocate();
+    start = std::chrono::steady_clock::now();
+    for (int i = 0; i < 100000000; i++) {
+        delete(test_res[i]);
+    }
+    finish = std::chrono::steady_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start);
+    std::cout << "delete: " << duration.count() << "ms" << std::endl;
+
+    start = std::chrono::steady_clock::now();
+    for (int i = 0; i < 100000000; i++) {
+        test_res[i] = new AllocType;
+    }
+    finish = std::chrono::steady_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start);
+    std::cout << "new: " << duration.count() << "ms" << std::endl;
+
+    start = std::chrono::steady_clock::now();
+    for (int i = 0; i < 100000000; i++) {
+        delete(test_res[i]);
+    }
+    finish = std::chrono::steady_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start);
+    std::cout << "delete: " << duration.count() << "ms" << std::endl;
 
 
-    std::cout << "Hello World!\n";
+    std::system("pause");
 }
 

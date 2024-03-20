@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include <mempool/detail.hpp>
+#include <pool/detail.hpp>
 
 namespace pool {
 
@@ -23,7 +23,6 @@ private:
     using SlotPos = uint32_t;
     using BlockId = uint32_t;
     using SlotId = uint32_t;
-
 	union Slot {
         SlotPos next;
         T element;
@@ -43,7 +42,7 @@ public:
         current_slot_ = kSlotPosInvalid;
         end_slot_ = kSlotPosInvalid;
     }
-    ~CompactMemoryPool() noexcept {
+    constexpr ~CompactMemoryPool() noexcept {
         for (auto& block : block_table_) {
             operator delete(reinterpret_cast<void*>(block.slot_array));
         }
@@ -52,10 +51,14 @@ public:
     CompactMemoryPool(const CompactMemoryPool&) = delete;
     void operator=(const CompactMemoryPool&) = delete;
 
+    template <class U> CompactMemoryPool(const CompactMemoryPool<U>& pool) noexcept :
+        CompactMemoryPool()
+    {}
+
     [[nodiscard]] SlotPos allocate(std::size_t n = 1) {
-        if (n > 1) {
-            throw std::runtime_error("memory pool does not support allocating multiple elements.");
-        }
+        //if (n > 1) {
+        //    throw std::runtime_error("memory pool does not support allocating multiple elements.");
+        //}
         SlotPos res{};
         if (free_slot_ != kSlotPosInvalid) {
             res = free_slot_;
@@ -63,15 +66,13 @@ public:
             auto& alloc_slot = block_table_[block_id].slot_array[slot_id];
             free_slot_ = alloc_slot.next;
             return res;
-        }
-        else {
+        } else {
             if (current_slot_ >= end_slot_) {
                 CreateBlock();
             }
             return current_slot_++;
         }
     }
-
     void deallocate(SlotPos free_pos, std::size_t n = 1) {
         if (free_pos != kSlotPosInvalid) {
             auto [block_id, slot_id] = SplitId(free_pos);
@@ -86,7 +87,6 @@ public:
         auto& slot = block_table_[block_id].slot_array[slot_id];
         return &slot.element;
     }
-
     void dereference(T*) {
 
     }
