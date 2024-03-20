@@ -11,8 +11,8 @@
 
 int main() {
     constexpr int count = 100000000;
-    constexpr int bytes = 8;
-    constexpr int block_bytes = 4096;
+    constexpr int bytes = 32;
+    constexpr int block_bytes = 32767;
 
     std::cout << "count:" << count << std::endl;
     std::cout << "bytes:" << bytes << std::endl;
@@ -29,18 +29,18 @@ int main() {
     for (int i = 0; i < 10000; i++) {
         map.insert({ i, i });
     }
-
+    
 
     using AllocType = std::array<int32_t, bytes / 4>;
     std::vector<AllocType*> test_res(count);
     std::vector<uint32_t> test_res2(count);
 
-    pool::MemoryPool<AllocType, block_bytes> pool;
+    pool::StaticMemoryPool<AllocType, block_bytes> pool;
 
     std::chrono::steady_clock::time_point start, finish;
     std::chrono::milliseconds duration;
 
-    std::cout << std::endl << "pool::MemoryPool" << std::endl;
+    std::cout << std::endl << "pool::StaticMemoryPool" << std::endl;
 
     start = std::chrono::steady_clock::now();
     for (int i = 0; i < 100000000; i++) {
